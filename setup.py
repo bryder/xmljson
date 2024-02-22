@@ -15,7 +15,7 @@ with io.open('HISTORY.rst', encoding='utf-8') as history_file:
 
 setup(
     name='xmljson',
-    version='0.2.0',
+    version='0.2.1',
     description='Converts XML into JSON/Python dicts/arrays and vice-versa.',
     long_description=readme + '\n\n' + history,
     author='S Anand',

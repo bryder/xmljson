@@ -2,6 +2,12 @@
 
 History
 -------
+0.2.1 (25 Apr 2020)
+~~~~~~~~~~~~~~~~~~~~
+- Bugfix: Don’t strip whitespace in xml text values (@imoore76)
+- Bugfix: Yahoo convention should convert ``<x>0</x>`` into ``{x: 0}``. Empty elements become ``''`` not ``{}``
+- Suggest alternate libraries in documentation
+
 0.2.0 (21 Nov 2018)
 ~~~~~~~~~~~~~~~~~~~~~
 - ``xmljson`` command line script converts from XML to JSON (@tribals)

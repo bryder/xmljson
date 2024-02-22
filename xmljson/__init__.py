@@ -9,7 +9,7 @@ except ImportError:
 
 __author__ = 'S Anand'
 __email__ = 'root.node@gmail.com'
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 # Python 3: define unicode() as str()
 if sys.version_info[0] == 3:
