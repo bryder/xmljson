@@ -2,6 +2,10 @@
 
 History
 -------
+0.2.2 (23 Feb 2024)
+~~~~~~~~~~~~~~~~~~~
+- Added 'Regular' dialect - similar to Cobra except if there is an attribute there will be children
+
 0.2.1 (25 Apr 2020)
 ~~~~~~~~~~~~~~~~~~~~
 - Bugfix: Don’t strip whitespace in xml text values (@imoore76)

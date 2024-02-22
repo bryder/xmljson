@@ -750,9 +750,120 @@ class TestCobra(TestXmlJson):
         eq('{"alice": {"attributes": {"charlie": "david"}, "children": ["bob"]}}',
             '<alice charlie="david">bob</alice>')
 
+        # Test cases to demonstrate what it does with simple elements in lists
+        # They get grouped into different objects
+        # This may be a bug or a feature. At the moment I'm testing it assuming
+        # it's a feature
+        eq('{"r":{"attributes":{},"children":[{"a":"is a"},{"b":"is b"}]}}',
+           '<r><a>is a</a><b>is b</b></r>')
+        eq('{"r":{"attributes":{},"children":[{"a":"is a"},{"b":"is b","c":"is c"}]}}',
+           '<r><a>is a</a><b>is b</b><c>is c</c></r>')
+        # You get attributes but no children for a if you leave it empty
+        eq('{"r": {"attributes": {}, "children": [ { "a": { "attributes": { "a_attr": "a a"}}}]}}',
+           '<r><a a_attr="a a"/></r>'
+           )
+
+
+class TestRegular(TestXmlJson):
+
+    def test_etree(self, converter=None):
+        'Regular conversion from data to etree'
+        eq = self.check_etree(xmljson.cobra)
+
+        eq({'animal': {'attributes': {}}}, '<animal/>')
+        eq({'animal': {'attributes': {}, 'children': ['Deka']}}, '<animal>Deka</animal>')
+        eq({'animal': {'attributes': {}, 'children': [1]}}, '<animal>1</animal>')
+        eq({'animal': {'attributes': {'name': 1}}}, '<animal name="1"/>')
+        eq({'animal': 'is my cat'},
+           '<animal>is my cat</animal>')
+        eq({'animal': {'attributes': {}, 'children': [{'dog': 'Charlie'}, {'cat': 'Deka'}]}},
+           '<animal><dog>Charlie</dog><cat>Deka</cat></animal>')
+        eq({'animal': {'attributes': {}, 'children': [{'dog': 'Charlie'}, {'dog': 'Mad Max'}]}},
+           '<animal><dog>Charlie</dog><dog>Mad Max</dog></animal>')
+        eq({'animal': {'attributes': {'dog': 'Charlie', 'cat': 'Deka'}}},
+           '<animal dog="Charlie" cat="Deka"/>')
+        eq({'animal': {'attributes': {}, 'children': [' in my house ', {'dog': 'Charlie'}]}},
+           '<animal> in my house <dog>Charlie</dog></animal>')
+        eq({'animal': {'attributes': {'dog': 'Charlie'}, 'children': [' in my house ']}},
+           '<animal dog="Charlie"> in my house </animal>')
+
+        # Test edge cases
+        eq('x', '<x/>')             # Strings become elements
+        eq({})                      # Empty objects become empty nodes
+        eq(Dict([                   # Multiple keys become multiple nodes
+            ('x', 'a'),
+            ('y', 'b')
+        ]), '<x>a</x>', '<y>b</y>')
+        with self.assertRaises(Exception):
+            eq({'x': {'@x': 1}}, '<x x="1"/>')
+
+        # Nested elements
+        eq({'alice': {'attributes': {}, 'children': [
+            {'bob': {'attributes': {}, 'children': [{'charlie': {'attributes': {}}}]}},
+            {'david': {'attributes': {}, 'children': [{'edgar': {'attributes': {}}}]}}]}},
+           '<alice><bob><charlie/></bob><david><edgar/></david></alice>')
+
+        # Multiple elements at the same level become array elements.
+        eq({'alice': {'attributes': {}, 'children': [
+            {'bob': {'attributes': {}, 'children': [{'charlie': {'attributes': {}}}]}},
+            {'bob': {'attributes': {}, 'children': [{'david': {'attributes': {}}}]}}]}},
+           '<alice><bob><charlie/></bob><bob><david/></bob></alice>')
+
+        self.check_invalid_tags(xmljson.Cobra)
+
+    @unittest.skip('To be written')
+    def test_html(self):
+        'Cobra conversion from data to HTML'
+        pass
+
+    def test_data(self):
+        'Regular conversion from etree to data'
+        eq = self.check_data(xmljson.regular)
+        eq('{"x":{"attributes":{},"children":[{"a":{"attributes":{},"children":[]}},{"b":"two"}]}}',
+           '<x><a/><b>two</b></x>')
+        eq('{"x":{"attributes":{},"children":[{"a":{"attributes":{},"children":[]}},{"b":"two"}]}}',
+           '<x><a></a><b>two</b></x>')
+        eq('{"x": {"attributes": {}, "children": [{"a": {"attributes": {}, "children": []}}]}}',
+           '<x><a/></x>')
+        eq('{"div": {"attributes": {"id": "2"}, "children": ["parent-text", {"p": "text"}]}}',
+           '<div id="2">parent-text<p>text</p></div>')
+        eq('{"x": {"attributes": {"x": "1"}, "children":[]}}',
+           '<x x="1"/>')
+
+        eq('{"root": {"attributes": {}, "children": [{"x": {"attributes": {"x": "1"}, "children":[]}},' +
+           ' {"y": {"attributes": {}, "children": [{"z": {"attributes": {}, "children":[]}}]}}]}}',
+           '<root><x x="1"/><y><z/></y></root>')
+
+            # Attributes
+        eq('{"p": {"attributes": {"id": "1"}, "children": ["text"]}}',
+           '<p id="1">text</p>')
+
+
+        # Text content of elements
+        eq('{"alice": "bob"}',
+           '<alice>bob</alice>')
+
+        # Nested elements become nested properties
+        eq('{"alice": {"attributes": {}, "children": [{"bob": "charlie"}, {"david": "edgar"}]}}',
+           '<alice><bob>charlie</bob><david>edgar</david></alice>')
+
+        # Multiple elements at the same level become array elements.
+        eq('{"alice": {"attributes": {}, "children": [{"bob": "charlie"}]}}',
+           '<alice><bob>charlie</bob></alice>')
+        eq('{"alice": {"attributes": {}, "children": [{"bob": "charlie"}, {"bob": "david"}]}}',
+           '<alice><bob>charlie</bob><bob>david</bob></alice>')
+
+        # Attributes go in specific "attributes" dictionary
+        eq('{"alice": {"attributes": {"charlie": "david"}, "children": ["bob"]}}',
+           '<alice charlie="david">bob</alice>')
+
         # Test cases to make sure the child elements
         # don't get grouped into different lists
         eq('{"r":{"attributes":{},"children":[{"a":"is a"},{"b":"is b"}]}}',
            '<r><a>is a</a><b>is b</b></r>')
         eq('{"r":{"attributes":{},"children":[{"a":"is a"},{"b":"is b"},{"c":"is c"}]}}',
            '<r><a>is a</a><b>is b</b><c>is c</c></r>')
+        # I always want to see attributes and children if attributes are there
+        eq('{"r": {"attributes": {}, "children": [ { "a": { "attributes": { "a_attr": "a a"}, "children": []}}]}}',
+           '<r><a a_attr="a a"/></r>'
+           )

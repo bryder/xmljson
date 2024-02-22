@@ -9,7 +9,7 @@ except ImportError:
 
 __author__ = 'S Anand'
 __email__ = 'root.node@gmail.com'
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 # Python 3: define unicode() as str()
 if sys.version_info[0] == 3:
@@ -335,10 +335,93 @@ class Cobra(XMLData):
                 else:
                     children_list = [self._fromstring(text), ]
 
+        count = Counter(child.tag for child in children)
+        for child in children:
+            child_data = self.data(child)
+            if (count[child.tag] == 1 and
+                    len(children_list) > 1 and
+                    isinstance(children_list[-1], dict)):
+                # Merge keys to existing dictionary
+                children_list[-1].update(child_data)
+            else:
+                # Add additional text
+                children_list.append(self.data(child))
+
+        if len(children_list) > 0:
+            value['children'] = children_list
+
+        return self.dict([(unicode(root.tag), value)])
+
+class Regular(XMLData):
+    '''Converts between XML and data using a more regular form of the Cobra convention'''
+    def __init__(self, **kwargs):
+        super(Regular, self).__init__(simple_text=True, text_content=True,
+                                    xml_fromstring=False, **kwargs)
+
+    def etree(self, data, root=None):
+        '''Convert data structure into a list of etree.Element'''
+        result = self.list() if root is None else root
+        if isinstance(data, (self.dict, dict)):
+            for key, value in data.items():
+                if isinstance(value, (self.dict, dict)):
+                    elem = self.element(key)
+                    if elem is None:
+                        continue
+                    result.append(elem)
+
+                    if 'attributes' in value:
+                        for k, v in value['attributes'].items():
+                            elem.set(k, self._tostring(v))
+                    # else:
+                    #     raise ValueError('Cobra requires "attributes" key for each element')
+
+                    if 'children' in value:
+                        for v in value['children']:
+                            self.etree(v, root=elem)
+                else:
+                    elem = self.element(key)
+                    if elem is None:
+                        continue
+                    elem.text = self._tostring(value)
+                    result.append(elem)
+        else:
+            if root is not None:
+                root.text = self._tostring(data)
+            else:
+                elem = self.element(self._tostring(data))
+                if elem is not None:
+                    result.append(elem)
+
+        return result
+
+    def data(self, root):
+        '''Convert etree.Element into a dictionary'''
+
+        value = self.dict()
+
+        # Add attributes to 'attributes' key (sorted!) even when empty
+        value['attributes'] = self.dict()
+        if root.attrib:
+            for attr in sorted(root.attrib):
+                value['attributes'][unicode(attr)] = root.attrib[attr]
+
+        # Add children to specific 'children' key
+        children_list = self.list()
+        children = [node for node in root if isinstance(node.tag, basestring)]
+
+        # Add root text
+        if root.text and self.text_content is not None:
+            text = root.text
+            if text.strip():
+                if self.simple_text and len(children) == len(root.attrib) == 0:
+                    value = self._fromstring(text)
+                else:
+                    children_list = [self._fromstring(text) ]
+
         for child in children:
             children_list.append(self.data(child))
 
-        if len(children_list) > 0:
+        if isinstance(value, (self.dict, dict)):
             value['children'] = children_list
 
         return self.dict([(unicode(root.tag), value)])
@@ -350,3 +433,4 @@ cobra = Cobra()
 gdata = GData()
 parker = Parker()
 yahoo = Yahoo()
+regular = Regular()
