@@ -749,3 +749,10 @@ class TestCobra(TestXmlJson):
         # Attributes go in specific "attributes" dictionary
         eq('{"alice": {"attributes": {"charlie": "david"}, "children": ["bob"]}}',
             '<alice charlie="david">bob</alice>')
+
+        # Test cases to make sure the child elements
+        # don't get grouped into different lists
+        eq('{"r":{"attributes":{},"children":[{"a":"is a"},{"b":"is b"}]}}',
+           '<r><a>is a</a><b>is b</b></r>')
+        eq('{"r":{"attributes":{},"children":[{"a":"is a"},{"b":"is b"},{"c":"is c"}]}}',
+           '<r><a>is a</a><b>is b</b><c>is c</c></r>')
